@@ -7,14 +7,45 @@ except ImportError:
 import os
 import numpy as np
 from time import time
+import pickle
 import itertools
+from keras import utils
+from collections import OrderedDict
+
 class DataUtility:
+
 
     #training_categories = ['on', 'off', 'yes', 'no', 'stop', 'go', 'up', 'down', 'left', 'right']
 
 
     def get_filenames(self, root_folder):
         return os.listdir(root_folder)
+
+    def load_npz_training_data(self, root_folder):
+        x = list()
+        y = list()
+        preprocessor_version = None
+        for d in os.listdir(root_folder):
+            if d.split('.')[-1] == 'npz':
+                ppv = self.get_preprocessor_version_from_filename(d)
+
+                if preprocessor_version is None:
+                    preprocessor_version = ppv
+                elif ppv != preprocessor_version:
+                    raise Exception("Preprocessor version mismatch in training data folder {0}!  ".format(root_folder))
+
+                full_path = "{0}/{1}".format(root_folder, d)
+                category_name = self.get_category_name_from_filename(d)
+                class_data = np.load(full_path)
+                for feature_set in class_data.items():
+                    for f in feature_set[1]:
+                        x.append(f)
+                        y.append(category_name)
+                print("Class {0} loaded.".format(category_name))
+            else:
+                print("Unknown directory {0}.  Skipping.".format(d))
+        print("Data load complete.")
+        return x, y, preprocessor_version
 
     def load_data_local(self, root_folder, training_categories, other_categories):
         x = list()
@@ -81,37 +112,34 @@ class DataUtility:
 
         return x_matches, y_matches
 
-    def save_model(self, prefix, model):
+    def save_model(self, saved_model_dir, prefix, model):
 
         ts = str(time())
-        filename = '{0}_{1}_{2}.h5'.format(prefix, "model", ts)
+        filename = '{0}/{1}_{2}_{3}.h5'.format(saved_model_dir, prefix, "model", ts)
         model.save(filename)
 
-        # Save the model to the Cloud Storage bucket's jobs directory
-        try:
-            with file_io.FileIO(filename, mode='r') as input_f:
-                gs_name = "gs://{0}/{1}".format(self.bucket_id, filename)
-                with file_io.FileIO(gs_name, mode='w+') as output_f:
-                    output_f.write(input_f.read())
-        except Exception as er:
-            print("An error occurred.  {0}".format(er.message))
-
-    def save_multi_model(self, path, model_name, model):
-
+    def save_categories(self, saved_model_dir, prefix, training_categories):
         ts = str(time())
-        filename = '{0}/{1}.h5'.format(path, model_name)
-        model.save(filename)
+        filename = '{0}/{1}_{2}_{3}.p'.format(saved_model_dir, prefix, "categories", ts)
+        with open(filename, mode="wb") as f:
+            pickle.dump(training_categories, f)
+        return filename
 
-        # Save the model to the Cloud Storage bucket's jobs directory
-        # try:
-        #     with file_io.FileIO(filename, mode='r') as input_f:
-        #         gs_name = "gs://{0}/models/{1}".format(self.bucket_id, filename)
-        #         with file_io.FileIO(gs_name, mode='w+') as output_f:
-        #             output_f.write(input_f.read())
-        # except Exception as er:
-        #   er  print("An error occurred.  {0}".format(er.message))
+    def load_categories(self, filename):
+        with open(filename, 'rb') as f:
+            loaded_list = pickle.load(f)
+        return loaded_list
 
+    def get_category_name_from_filename(self, filename):
+        #blah-1.2.3.npz
+        return filename.split('-')[0]
 
-    def save_categories(self, filename):
-        with file_io.FileIO("{0}.p".format(filename), mode='w+') as output_f:
-            output_f.write(self.training_categories)
+    def get_preprocessor_version_from_filename(self, filename):
+        #blah-1.2.3.npz
+        return filename.split('-')[1][:-4]
+
+    def get_vectorized_data(self, a):
+        classes = list(OrderedDict.fromkeys(a))
+        idx = [classes.index(i) for i in list(a)]
+        vectors = utils.to_categorical(idx, len(classes))
+        return classes, vectors
