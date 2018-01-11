@@ -5,11 +5,11 @@ from data_utility import DataUtility
 
 class StagingEngine:
 
-    root_data_dir = "/Users/milesporter/Desktop/kaggle/data/train/audio"
+    root_data_dir = "/home/miles/kaggle_tf_audio/data/train/audio"
     class_dirs = ['on', 'off', 'yes', 'no', 'stop', 'go', 'up', 'down', 'left', 'right',
                   'four', 'three', 'bed', 'tree', 'bird', 'happy', 'one', 'two', 'cat', 'house', 'dog',
                   'left', 'seven', 'wow', 'marvin', 'sheila', 'eight', 'nine', 'six', 'zero', 'five']
-    target_directory = "/Users/milesporter/data-science/data-sets/kaggle_speach_data"
+    target_directory = "/home/miles/kaggle_speech_data"
 
     preprocessor = None
     du = DataUtility()

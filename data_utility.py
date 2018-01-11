@@ -11,6 +11,8 @@ import pickle
 import itertools
 from keras import utils
 from collections import OrderedDict
+from keras.models import load_model
+import glob
 
 class DataUtility:
 
@@ -143,3 +145,15 @@ class DataUtility:
         idx = [classes.index(i) for i in list(a)]
         vectors = utils.to_categorical(idx, len(classes))
         return classes, vectors
+
+    def load_latest_model(self, model_directory):
+        list_of_files = glob.glob('{0}/*.h5'.format(model_directory))  # * means all if need specific format then *.csv
+        latest_file = max(list_of_files, key=os.path.getctime)
+        #file_path = '{0}/{1}'.format(model_directory, latest_file)
+        model = load_model(latest_file)
+        return model
+
+    def load_latest_category(self, category_directory):
+        list_of_files = glob.glob('{0}/*.p'.format(category_directory))  # * means all if need specific format then *.csv
+        latest_file = max(list_of_files, key=os.path.getctime)
+        return self.load_categories(latest_file)
